@@ -3,13 +3,11 @@ const bodyParser = require('body-parser');
 const fs = require('fs').promises;
 const { PNG } = require('pngjs');
 const fingerprint = require('fingerprintjs2');
-const multer = require('multer');
 const app = express();
 const mysql = require('mysql');
 
-app.use(bodyParser.urlencoded({ extended: true }));
-
-const upload = multer({ dest: 'uploads/' });
+// Middleware to parse JSON bodies
+app.use(bodyParser.json({ limit: '10mb' })); // Increase the limit if necessary
 
 const pool = mysql.createPool({
     connectionLimit: 10,
@@ -19,20 +17,19 @@ const pool = mysql.createPool({
     database: 'perpustakaan'
 });
 
-app.post('/api/login', upload.single('fingerprintImage'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ success: false, message: 'fingerprintImage is required' });
+app.post('/api/login', async (req, res) => {
+    const { email, fingerprint } = req.body;
+
+    if (!fingerprint) {
+        return res.status(400).json({ success: false, message: 'fingerprint is required' });
     }
 
-    const { email } = req.body;
     if (!email) {
         return res.status(400).json({ success: false, message: 'Email is required' });
     }
 
-    const filePath = req.file.path;
-
     try {
-        const data = await fs.readFile(filePath);
+        const data = Buffer.from(fingerprint, 'base64');
         const png = new PNG();
 
         png.parse(data, (err) => {
@@ -70,31 +67,24 @@ app.post('/api/login', upload.single('fingerprintImage'), async (req, res) => {
                 });
         });        
     } catch (error) {
-        console.error('Error during file processing:', error);
+        console.error('Error during image processing:', error);
         res.status(500).json({ success: false, message: error.message || 'Server error' });
-    } finally {
-        try {
-            await fs.unlink(filePath);
-        } catch (unlinkError) {
-            console.error(`Error removing temporary file: ${unlinkError.message}`);
-        }
     }
 });
 
-app.post('/api/enroll', upload.single('fingerprintImage'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ success: false, message: 'fingerprintImage is required' });
+app.post('/api/enroll', async (req, res) => {
+    const { email, fingerprint } = req.body;
+
+    if (!fingerprint) {
+        return res.status(400).json({ success: false, message: 'fingerprint is required' });
     }
 
-    const { email } = req.body;
     if (!email) {
         return res.status(400).json({ success: false, message: 'Email is required' });
     }
 
-    const filePath = req.file.path;
-
     try {
-        const data = await fs.readFile(filePath);
+        const data = Buffer.from(fingerprint, 'base64');
         const png = new PNG();
 
         png.parse(data, async (err) => {
@@ -122,14 +112,8 @@ app.post('/api/enroll', upload.single('fingerprintImage'), async (req, res) => {
                 });
         });
     } catch (error) {
-        console.error('Error during file processing:', error);
+        console.error('Error during image processing:', error);
         res.status(500).json({ success: false, message: error.message || 'Server error' });
-    } finally {
-        try {
-            await fs.unlink(filePath);
-        } catch (unlinkError) {
-            console.error(`Error removing temporary file: ${unlinkError.message}`);
-        }
     }
 });
 
