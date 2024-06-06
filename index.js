@@ -1,13 +1,15 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 const fs = require('fs').promises;
 const { PNG } = require('pngjs');
 const fingerprint = require('fingerprintjs2');
 const app = express();
 const mysql = require('mysql');
 
-// Middleware to parse JSON bodies
-app.use(bodyParser.json({ limit: '10mb' })); // Increase the limit if necessary
+app.use(cors());
+
+app.use(bodyParser.json({ limit: '10mb' }));
 
 const pool = mysql.createPool({
     connectionLimit: 10,
