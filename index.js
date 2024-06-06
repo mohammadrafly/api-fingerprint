@@ -16,7 +16,7 @@ const pool = mysql.createPool({
     host: 'localhost',
     user: 'root',
     password: '',
-    database: 'perpustakaan_fingerprint'
+    database: 'perpustakaan'
 });
 
 app.post('/api/login', upload.single('fingerprintImage'), async (req, res) => {
@@ -24,9 +24,9 @@ app.post('/api/login', upload.single('fingerprintImage'), async (req, res) => {
         return res.status(400).json({ success: false, message: 'fingerprintImage is required' });
     }
 
-    const { nim } = req.body;
-    if (!nim) {
-        return res.status(400).json({ success: false, message: 'NIM is required' });
+    const { email } = req.body;
+    if (!email) {
+        return res.status(400).json({ success: false, message: 'Email is required' });
     }
 
     const filePath = req.file.path;
@@ -45,7 +45,7 @@ app.post('/api/login', upload.single('fingerprintImage'), async (req, res) => {
                 .then(async components => {
                     const generatedFingerprint = fingerprint.x64hash128(components.map(pair => pair.value).join(), 31);
                     
-                    pool.query('SELECT fingerprint FROM users WHERE nim = ?', [nim], (error, results) => {
+                    pool.query('SELECT fingerprint FROM users WHERE email = ?', [email], (error, results) => {
                         if (error) {
                             console.error('Error retrieving user fingerprint:', error);
                             return res.status(500).json({ success: false, message: 'Error retrieving user fingerprint' });
@@ -86,9 +86,9 @@ app.post('/api/enroll', upload.single('fingerprintImage'), async (req, res) => {
         return res.status(400).json({ success: false, message: 'fingerprintImage is required' });
     }
 
-    const { nim } = req.body;
-    if (!nim) {
-        return res.status(400).json({ success: false, message: 'NIM is required' });
+    const { email } = req.body;
+    if (!email) {
+        return res.status(400).json({ success: false, message: 'Email is required' });
     }
 
     const filePath = req.file.path;
@@ -107,7 +107,7 @@ app.post('/api/enroll', upload.single('fingerprintImage'), async (req, res) => {
                 .then(async components => {
                     const generatedFingerprint = fingerprint.x64hash128(components.map(pair => pair.value).join(), 31);
  
-                    pool.query('UPDATE users SET fingerprint = ? WHERE nim = ?', [generatedFingerprint, nim], (error, results) => {
+                    pool.query('UPDATE users SET fingerprint = ? WHERE email = ?', [generatedFingerprint, email], (error, results) => {
                         if (error) {
                             console.error('Error storing fingerprint in database:', error);
                             return res.status(500).json({ success: false, message: 'Error storing fingerprint in database' });
