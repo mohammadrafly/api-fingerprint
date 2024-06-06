@@ -18,14 +18,10 @@ const pool = mysql.createPool({
 });
 
 app.post('/api/login', async (req, res) => {
-    const { email, fingerprint } = req.body;
+    const { fingerprint } = req.body;
 
     if (!fingerprint) {
-        return res.status(400).json({ success: false, message: 'fingerprint is required' });
-    }
-
-    if (!email) {
-        return res.status(400).json({ success: false, message: 'Email is required' });
+        return res.status(400).json({ success: false, message: 'Fingerprint data is required' });
     }
 
     try {
@@ -42,7 +38,7 @@ app.post('/api/login', async (req, res) => {
                 .then(async components => {
                     const generatedFingerprint = fingerprint.x64hash128(components.map(pair => pair.value).join(), 31);
                     
-                    pool.query('SELECT fingerprint FROM users WHERE email = ?', [email], (error, results) => {
+                    pool.query('SELECT fingerprint FROM users WHERE fingerprint = ?', [generatedFingerprint], (error, results) => {
                         if (error) {
                             console.error('Error retrieving user fingerprint:', error);
                             return res.status(500).json({ success: false, message: 'Error retrieving user fingerprint' });
@@ -52,13 +48,8 @@ app.post('/api/login', async (req, res) => {
                             return res.status(404).json({ success: false, message: 'User not found' });
                         }
 
-                        const storedFingerprint = results[0].fingerprint;
-
-                        if (generatedFingerprint === storedFingerprint) {
-                            res.json({ success: true, message: 'Login berhasil!' });
-                        } else {
-                            res.status(401).json({ success: false, message: 'Login gagal. Sidik jari tidak cocok.' });
-                        }
+                        // User found by fingerprint
+                        res.json({ success: true, message: 'Login berhasil!' });
                     });
                 })
                 .catch(error => {
@@ -73,14 +64,10 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.post('/api/enroll', async (req, res) => {
-    const { email, fingerprint } = req.body;
+    const { fingerprint } = req.body;
 
     if (!fingerprint) {
-        return res.status(400).json({ success: false, message: 'fingerprint is required' });
-    }
-
-    if (!email) {
-        return res.status(400).json({ success: false, message: 'Email is required' });
+        return res.status(400).json({ success: false, message: 'Fingerprint data is required' });
     }
 
     try {
@@ -97,7 +84,7 @@ app.post('/api/enroll', async (req, res) => {
                 .then(async components => {
                     const generatedFingerprint = fingerprint.x64hash128(components.map(pair => pair.value).join(), 31);
  
-                    pool.query('UPDATE users SET fingerprint = ? WHERE email = ?', [generatedFingerprint, email], (error, results) => {
+                    pool.query('INSERT INTO users (fingerprint) VALUES (?)', [generatedFingerprint], (error, results) => {
                         if (error) {
                             console.error('Error storing fingerprint in database:', error);
                             return res.status(500).json({ success: false, message: 'Error storing fingerprint in database' });
